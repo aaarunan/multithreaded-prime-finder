@@ -6,6 +6,8 @@
 
 using namespace std;
 
+mutex mtx;
+
 vector<int> findPrimeNumbersInterval(int start, int end) {
     //check if number is even
     if (start ^ (1 == start + 1)) {
@@ -32,33 +34,34 @@ vector<int> findPrimeNumbersInterval(int start, int end) {
     return primes;
 }
 
-void printResults(double duration, unsigned long primes) {
+void printResults(double duration, const vector<int>& primes) {
     cout << "Program finish.\n";
-    cout << "Time taken:      " << duration << "s\n";
-    cout << "Found :          " << primes << "\n";
+    cout << "Time taken:      " << duration << " s\n";
+    cout << "Found :          " << primes.size() << " primes \n";
 
 }
 
 int main() {
     int start = 0;
     int end = 50000000;
-    int intervalLength = 50000;
+    int intervalLength = 20000;
 
-    mutex mutex;
 
     vector<thread> threads;
     vector<int> primes;
 
+
     auto start_time = chrono::steady_clock::now();
     int i = 0;
 
+    cout << "Finding primes between " << start << " and " << end << "...\n";
+
     while (i < end) {
         threads.emplace_back(
-                [i, &intervalLength, &primes, &mutex] {
+                [i, &intervalLength, &primes] {
                     vector<int> found_primes = findPrimeNumbersInterval(i, i + intervalLength);
-                    std::lock_guard<std::mutex> lock(mutex);
+                    std::lock_guard<std::mutex> lock(mtx);
                     primes.insert(primes.end(), found_primes.begin(), found_primes.end());
-                    found_primes.clear();
                 });
 
         i += intervalLength;
@@ -67,10 +70,11 @@ int main() {
     for (auto &thread: threads) {
         thread.join();
     }
+
     auto end_time = chrono::steady_clock::now();
     std::chrono::duration<double> duration = end_time - start_time;
 
-    printResults(duration.count(), primes.size());
+    printResults(duration.count(), primes);
     return 0;
 }
 
