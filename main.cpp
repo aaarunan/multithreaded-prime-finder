@@ -9,11 +9,14 @@ using namespace std;
 mutex mtx;
 
 bool isPrime(int num) {
-    if (num <= 2) {
+    if (num <= 1) {
         return false;
     }
+    if (num == 2) {
+        return true;
+    }
     if ((num & 1) == 0) {
-       return false;
+        return false;
     }
 
     int num_sqrt = (int) sqrt(num);
