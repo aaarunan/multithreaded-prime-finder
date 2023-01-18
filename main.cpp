@@ -8,42 +8,32 @@ using namespace std;
 
 mutex mtx;
 
-bool isPrime(int num) {
-    //Not needed in a controlled environment
-    //if (num == 2) {
-    //    return true;
-    //}
-    //if ((num & 1) == 0) {
-    //    return false;
-    //}
-    //if (num <= 1) {
-    // return false;
-    //}
+bool isPrime(int n) {
+    if (n <= 1) return false;
+    //if (n <= 3) return true;
+    //if (n == 5) return true;
+    //if (n == 7) return true;
+    if (n % 3 == 0 || n % 5 == 0 || n % 7 == 0) return false;
 
-    int num_sqrt = (int) sqrt(num);
-
-    for (int i = 3; i <= num_sqrt; i += 2) {
-        if (num % i == 0) {
-            return false;
-        }
+    int sqrt_n = (int) sqrt(n);
+    for (int i = 5; i <= sqrt_n; i += 6) {
+        if (n % i == 0 || n % (i + 2) == 0) return false;
     }
-
     return true;
 }
 
-void findPrimes(int num, int intervalLength, vector<int> &primes) {
-    int start = num;
+void findPrimesInInterval(int start, int end, vector<int> &primes) {
+    int pointer = start;
 
     //check if number is even except number 2
-    if ((num & 1) == 0) {
-        start++;
-    }
+    if ((start & 1) == 0) {
+        pointer++;
 
-
-    for (int j = start; j < start + intervalLength; j += 2) {
-        if (isPrime(j)) {
-            std::lock_guard<std::mutex> lock(mtx);
-            primes.emplace_back(j);
+        for (int j = pointer; j < end; j += 2) {
+            if (isPrime(j)) {
+                std::lock_guard<std::mutex> lock(mtx);
+                primes.emplace_back(j);
+            }
         }
     }
 }
@@ -65,36 +55,34 @@ void test() {
 
 int main() {
     int start = 2;
-    int end = 100000000;
-    int intervalLength = 100000;
+    int end = 1000000;
+    int intervalLength = 50000;
 
     //test();
 
     int i = 0;
     vector<thread> threads;
-    vector<int> primes;
+
+    //These primes are not checked for in is prime
+    vector<int> primes = {2, 3, 5, 7};
 
     cout << "Finding primes between " << start << " and " << end << "...\n";
 
     auto start_time = chrono::steady_clock::now();
 
-    if (start <= 2) {
-        primes.push_back(2);
-    }
-
     //Create threads with an array of numbers with length intervalLength
     while (i < end) {
-        threads.emplace_back([i, intervalLength, &primes] { findPrimes(i, intervalLength, primes); });
+        threads.emplace_back([i, intervalLength, &primes] { findPrimesInInterval(i, i + intervalLength, primes); });
         i += intervalLength;
     }
 
     //Do the rest of the numbers if there are any
     if (i != end) {
-        int rest = end - i;
-        threads.emplace_back([i, rest, &primes] { findPrimes(i, rest, primes); });
+        threads.emplace_back([i, end, &primes] { findPrimesInInterval(i, end, primes); });
     }
 
-    for (auto &thread : threads) {
+    //Wait for all threads to finish
+    for (auto &thread: threads) {
         thread.join();
     }
 
